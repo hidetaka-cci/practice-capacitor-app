@@ -41,7 +41,7 @@ jobs:
             - node_modules
             - package.json
             - package-lock.json
-            - capacitor.config.ts
+            - capacitor.config.json
       - store_artifacts:
           path: dist
           destination: web-build
@@ -95,13 +95,19 @@ jobs:
           name: Resolve Swift Package Dependencies
           command: |
             cd ios/App
-            xcodebuild -resolvePackageDependencies -project App.xcodeproj -scheme App
+            xcodebuild -resolvePackageDependencies \
+              -project App.xcodeproj \
+              -scheme App \
+              -derivedDataPath build/DerivedData
       - run:
           name: Clean iOS build
           command: |
             cd ios/App
-            xcodebuild clean -project App.xcodeproj -scheme App || true
-            rm -rf ~/Library/Developer/Xcode/DerivedData/* || true
+            xcodebuild clean \
+              -project App.xcodeproj \
+              -scheme App \
+              -derivedDataPath build/DerivedData || true
+            rm -rf build/DerivedData || true
       - run:
           name: Build iOS
           command: |
@@ -110,7 +116,25 @@ jobs:
               -scheme App \
               -configuration Debug \
               -sdk iphonesimulator \
-              -destination 'platform=iOS Simulator,name=iPhone 15' \
+              -destination "platform=iOS Simulator,id=$(python3 - <<'PY'
+import json, subprocess, sys
+out = subprocess.check_output(["xcrun","simctl","list","devices","available","-j"], text=True)
+data = json.loads(out)
+devices = []
+for runtime, ds in data.get("devices", {}).items():
+  for d in ds:
+    if d.get("isAvailable") and d.get("state") in ("Shutdown","Booted"):
+      devices.append(d)
+# Prefer iPhone, then any available simulator
+for preferred in (lambda d: "iPhone" in d.get("name",""), lambda d: True):
+  for d in devices:
+    if preferred(d) and d.get("udid"):
+      print(d["udid"])
+      sys.exit(0)
+sys.exit(1)
+PY
+)" \
+              -derivedDataPath build/DerivedData \
               clean build \
               CODE_SIGN_IDENTITY="" \
               CODE_SIGNING_REQUIRED=NO \
