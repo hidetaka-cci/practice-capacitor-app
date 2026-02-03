@@ -54,7 +54,6 @@ jobs:
   build-android:
     macos:
       xcode: << pipeline.parameters.xcode_version >>
-    resource_class: macos.m4.large
     steps:
       - checkout
       - attach_workspace:
