@@ -3,6 +3,11 @@ version: 2.1
 orbs:
   node: circleci/node@7.2.0
 
+parameters:
+  xcode_version:
+    type: string
+    default: "26.2.0"
+
 workflows:
   build:
     jobs:
@@ -78,13 +83,18 @@ jobs:
 
   build-ios:
     macos:
-      xcode: "15.4.0"
+      xcode: << pipeline.parameters.xcode_version >>
     steps:
       - checkout
       - attach_workspace:
           at: .
       - node/install:
           node-version: "24.0"
+      - run:
+          name: Toolchain versions
+          command: |
+            xcodebuild -version
+            swiftc -version
       - run:
           name: Install dependencies
           command: npm ci
