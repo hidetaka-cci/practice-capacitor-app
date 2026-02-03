@@ -1,0 +1,149 @@
+version: 2.1
+
+# ワークフロー定義
+workflows:
+  build:
+    jobs:
+      - build-web
+      - build-android:
+          requires:
+            - build-web
+      - build-ios:
+          requires:
+            - build-web
+
+# ジョブ定義
+jobs:
+  # Webビルドジョブ
+  build-web:
+    docker:
+      - image: cimg/node:20.0
+    steps:
+      - checkout
+      
+      # node_modulesのキャッシュ復元
+      - restore_cache:
+          keys:
+            - node-modules-v1-{{ checksum "package-lock.json" }}
+            - node-modules-v1-
+      
+      # 依存関係のインストール
+      - run:
+          name: npm install
+          command: npm ci
+      
+      # node_modulesのキャッシュ保存
+      - save_cache:
+          key: node-modules-v1-{{ checksum "package-lock.json" }}
+          paths:
+            - node_modules
+      
+      # Webビルド実行
+      - run:
+          name: Build web assets
+          command: npm run build
+      
+      # Capacitor同期（Webアセットをネイティブプロジェクトにコピー）
+      - run:
+          name: Sync Capacitor
+          command: npx cap sync
+      
+      # ビルド成果物を保存
+      - persist_to_workspace:
+          root: .
+          paths:
+            - dist
+            - android
+            - ios
+            - node_modules
+      
+      # Webビルド成果物をアーティファクトとして保存
+      - store_artifacts:
+          path: dist
+          destination: web-build
+
+  # Androidビルドジョブ
+  build-android:
+    docker:
+      - image: cimg/android:2024.01.1
+    environment:
+      JAVA_HOME: /usr/lib/jvm/java-21-openjdk-amd64
+      ANDROID_HOME: /home/circleci/.android-sdk
+    steps:
+      - checkout
+      
+      # ワークスペースから成果物を復元
+      - attach_workspace:
+          at: .
+      
+      # Gradleキャッシュの復元
+      - restore_cache:
+          keys:
+            - gradle-v1-{{ checksum "android/build.gradle" }}-{{ checksum "android/app/build.gradle" }}
+            - gradle-v1-
+      
+      # Androidビルド実行
+      - run:
+          name: Build Android APK
+          command: |
+            cd android
+            ./gradlew assembleDebug
+      
+      # Gradleキャッシュの保存
+      - save_cache:
+          key: gradle-v1-{{ checksum "android/build.gradle" }}-{{ checksum "android/app/build.gradle" }}
+          paths:
+            - ~/.gradle/caches
+            - ~/.gradle/wrapper
+      
+      # Android APKをアーティファクトとして保存
+      - store_artifacts:
+          path: android/app/build/outputs/apk
+          destination: android-apk
+      
+      # APKファイルをワークスペースに保存（オプション）
+      - persist_to_workspace:
+          root: .
+          paths:
+            - android/app/build/outputs/apk
+
+  # iOSビルドジョブ
+  build-ios:
+    macos:
+      xcode: "15.0.0"
+    steps:
+      - checkout
+      
+      # ワークスペースから成果物を復元
+      - attach_workspace:
+          at: .
+      
+      # Node.jsのセットアップ（Capacitor CLI用）
+      - run:
+          name: Setup Node.js
+          command: |
+            brew install node@20
+            echo 'export PATH="/opt/homebrew/opt/node@20/bin:$PATH"' >> ~/.zshrc
+            export PATH="/opt/homebrew/opt/node@20/bin:$PATH"
+            node --version
+            npm --version
+      
+      # iOSビルド実行
+      - run:
+          name: Build iOS
+          command: |
+            cd ios/App
+            xcodebuild -project App.xcodeproj \
+              -scheme App \
+              -configuration Debug \
+              -sdk iphonesimulator \
+              -destination 'platform=iOS Simulator,name=iPhone 15' \
+              clean build \
+              CODE_SIGN_IDENTITY="" \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGNING_ALLOWED=NO
+      
+      # iOSビルド成果物をアーティファクトとして保存
+      - store_artifacts:
+          path: ios/App/build
+          destination: ios-build
