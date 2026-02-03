@@ -53,6 +53,8 @@ jobs:
       - checkout
       - attach_workspace:
           at: .
+      - node/install:
+          node-version: "24.0.0"
       - restore_cache:
           keys:
             - gradle-v1-{{ checksum "android/build.gradle" }}-{{ checksum "android/app/build.gradle" }}
