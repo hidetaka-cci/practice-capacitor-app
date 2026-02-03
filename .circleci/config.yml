@@ -52,24 +52,56 @@ jobs:
           destination: web-build
 
   build-android:
-    docker:
-      - image: cimg/android:2026.02.1-node
+    macos:
+      xcode: << pipeline.parameters.xcode_version >>
+    resource_class: macos.m4.large
     steps:
       - checkout
       - attach_workspace:
           at: .
       - node/install:
           node-version: "24.0.0"
+      - run:
+          name: Install Java
+          command: |
+            brew install openjdk@17
+            echo 'export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"' >> ~/.zshrc
+            export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
+            java -version
+      - run:
+          name: Install Android SDK
+          command: |
+            brew install --cask android-commandlinetools
+            export ANDROID_HOME=$HOME/Library/Android/sdk
+            export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+            sdkmanager --version || true
+            mkdir -p $ANDROID_HOME/cmdline-tools
+            if [ ! -d "$ANDROID_HOME/cmdline-tools/latest" ]; then
+              cd $ANDROID_HOME/cmdline-tools
+              curl -o cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-mac-11076708_latest.zip
+              unzip -q cmdline-tools.zip
+              mv cmdline-tools latest
+              rm cmdline-tools.zip
+            fi
+            yes | sdkmanager --licenses || true
+            sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
       - restore_cache:
           keys:
             - gradle-v1-{{ checksum "android/build.gradle" }}-{{ checksum "android/app/build.gradle" }}
             - gradle-v1-
       - run:
           name: Sync Capacitor
-          command: npx cap sync android
+          command: |
+            export ANDROID_HOME=$HOME/Library/Android/sdk
+            export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+            export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
+            npx cap sync android
       - run:
           name: Build Android APK
           command: |
+            export ANDROID_HOME=$HOME/Library/Android/sdk
+            export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+            export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
             cd android
             ./gradlew assembleDebug
       - save_cache:
