@@ -82,7 +82,7 @@ jobs:
       - attach_workspace:
           at: .
       - node/install:
-          node-version: "20"
+          node-version: "24.0"
       - run:
           name: Sync Capacitor
           command: npx cap sync ios
