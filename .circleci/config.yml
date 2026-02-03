@@ -70,10 +70,8 @@ jobs:
       - run:
           name: Install Android SDK
           command: |
-            brew install --cask android-commandlinetools
+            export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
             export ANDROID_HOME=$HOME/Library/Android/sdk
-            export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
-            sdkmanager --version || true
             mkdir -p $ANDROID_HOME/cmdline-tools
             if [ ! -d "$ANDROID_HOME/cmdline-tools/latest" ]; then
               cd $ANDROID_HOME/cmdline-tools
@@ -82,8 +80,22 @@ jobs:
               mv cmdline-tools latest
               rm cmdline-tools.zip
             fi
+            export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+            sdkmanager --version
+      - run:
+          name: Install Android SDK components
+          command: |
+            export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
+            export ANDROID_HOME=$HOME/Library/Android/sdk
+            export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+            # 既存のライセンスを受け入れる
             yes | sdkmanager --licenses || true
-            sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+            # 各パッケージをライセンス承認付きでインストール
+            echo y | sdkmanager "platform-tools"
+            echo y | sdkmanager "platforms;android-34"
+            echo y | sdkmanager "platforms;android-36"
+            echo y | sdkmanager "build-tools;34.0.0"
+            echo y | sdkmanager "build-tools;35.0.0"
       - restore_cache:
           keys:
             - gradle-v1-{{ checksum "android/build.gradle" }}-{{ checksum "android/app/build.gradle" }}
