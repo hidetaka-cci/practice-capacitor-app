@@ -63,14 +63,14 @@ jobs:
       - run:
           name: Install Java
           command: |
-            brew install openjdk@17
-            echo 'export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"' >> ~/.zshrc
-            export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
+            brew install openjdk@21
+            echo 'export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"' >> ~/.zshrc
+            export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"
             java -version
       - run:
           name: Install Android SDK
           command: |
-            export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
+            export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"
             export ANDROID_HOME=$HOME/Library/Android/sdk
             mkdir -p $ANDROID_HOME/cmdline-tools
             if [ ! -d "$ANDROID_HOME/cmdline-tools/latest" ]; then
@@ -85,7 +85,7 @@ jobs:
       - run:
           name: Install Android SDK components
           command: |
-            export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
+            export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"
             export ANDROID_HOME=$HOME/Library/Android/sdk
             export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
             # 既存のライセンスを受け入れる
@@ -105,14 +105,14 @@ jobs:
           command: |
             export ANDROID_HOME=$HOME/Library/Android/sdk
             export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
-            export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
+            export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"
             npx cap sync android
       - run:
           name: Build Android APK
           command: |
             export ANDROID_HOME=$HOME/Library/Android/sdk
             export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
-            export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
+            export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"
             cd android
             ./gradlew assembleDebug
       - save_cache:
