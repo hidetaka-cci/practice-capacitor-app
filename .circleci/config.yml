@@ -17,7 +17,7 @@ jobs:
   # Webビルドジョブ
   build-web:
     docker:
-      - image: cimg/node:20.0
+      - image: cimg/node:24.0
     steps:
       - checkout
       
