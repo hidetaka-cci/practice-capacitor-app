@@ -86,8 +86,22 @@ jobs:
       - node/install:
           node-version: "24.0"
       - run:
+          name: Install dependencies
+          command: npm ci
+      - run:
           name: Sync Capacitor
           command: npx cap sync ios
+      - run:
+          name: Resolve Swift Package Dependencies
+          command: |
+            cd ios/App
+            xcodebuild -resolvePackageDependencies -project App.xcodeproj -scheme App
+      - run:
+          name: Clean iOS build
+          command: |
+            cd ios/App
+            xcodebuild clean -project App.xcodeproj -scheme App || true
+            rm -rf ~/Library/Developer/Xcode/DerivedData/* || true
       - run:
           name: Build iOS
           command: |
@@ -100,7 +114,11 @@ jobs:
               clean build \
               CODE_SIGN_IDENTITY="" \
               CODE_SIGNING_REQUIRED=NO \
-              CODE_SIGNING_ALLOWED=NO
+              CODE_SIGNING_ALLOWED=NO \
+              2>&1 | tee build.log
       - store_artifacts:
           path: ios/App/build
           destination: ios-build
+      - store_artifacts:
+          path: ios/App/build.log
+          destination: ios-build-log
